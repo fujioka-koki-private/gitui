@@ -118,11 +118,6 @@ impl CommitList {
 	}
 
 	///
-	pub fn clear_marked(&mut self) {
-		self.marked.clear();
-	}
-
-	///
 	pub fn marked_commits(&self) -> Vec<CommitId> {
 		let (_, commits): (Vec<_>, Vec<CommitId>) =
 			self.marked.iter().copied().unzip();
@@ -202,15 +197,6 @@ impl CommitList {
 				.entry(remote_branch.top_commit)
 				.or_default()
 				.push(remote_branch);
-		}
-	}
-
-	///
-	pub fn set_commits(&mut self, commits: IndexSet<CommitId>) {
-		if commits != self.commits {
-			self.items.clear();
-			self.commits = commits;
-			self.fetch_commits(false);
 		}
 	}
 

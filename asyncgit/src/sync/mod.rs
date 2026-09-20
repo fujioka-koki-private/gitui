@@ -27,7 +27,6 @@ mod reset;
 mod reword;
 pub mod sign;
 mod staging;
-mod stash;
 mod state;
 pub mod status;
 mod submodules;
@@ -90,9 +89,6 @@ pub use repository::{RepoPath, RepoPathRef};
 pub use reset::{reset_repo, reset_stage, reset_workdir};
 pub use reword::reword;
 pub use staging::{discard_lines, stage_lines};
-pub use stash::{
-	get_stashes, stash_apply, stash_drop, stash_pop, stash_save,
-};
 pub use state::{repo_state, RepoState};
 pub use status::is_workdir_clean;
 pub use submodules::{

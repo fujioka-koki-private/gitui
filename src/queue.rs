@@ -4,7 +4,6 @@ use crate::{
 		AppOption, BlameFileOpen, FileRevOpen, FileTreeOpen,
 		InspectCommitOpen,
 	},
-	tabs::StashingOptions,
 };
 use asyncgit::{
 	sync::{
@@ -45,8 +44,6 @@ pub enum Action {
 	Reset(ResetItem),
 	ResetHunk(String, u64),
 	ResetLines(String, Vec<DiffLinePosition>),
-	StashDrop(Vec<CommitId>),
-	StashPop(CommitId),
 	DeleteLocalBranch(String),
 	DeleteRemoteBranch(String),
 	DeleteTag(String),
@@ -78,8 +75,6 @@ pub enum AppTabs {
 	Status,
 	Log,
 	Files,
-	Stashing,
-	Stashlist,
 }
 
 ///
@@ -99,11 +94,7 @@ pub enum InternalEvent {
 	/// open commit msg input
 	OpenCommit,
 	///
-	PopupStashing(StashingOptions),
-	///
 	TabSwitchStatus,
-	///
-	TabSwitch(AppTabs),
 	///
 	SelectCommitInRevlog(CommitId),
 	///
