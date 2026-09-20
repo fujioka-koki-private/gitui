@@ -3,12 +3,11 @@
 use super::{diff::DiffOptions, CommitId, RepoPath};
 use crate::{
 	error::Result,
-	sync::{get_stashes, repository::repo},
+	sync::repository::repo,
 	StatusItem, StatusItemType,
 };
 use git2::{Diff, Repository};
 use scopetime::scope_time;
-use std::collections::HashSet;
 
 /// struct containing a new and an old version
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -58,13 +57,7 @@ pub fn get_commit_files(
 			None,
 		)?
 	} else {
-		get_commit_diff(
-			&repo,
-			id,
-			None,
-			None,
-			Some(&get_stashes(repo_path)?.into_iter().collect()),
-		)?
+		get_commit_diff(&repo, id, None, None)?
 	};
 
 	let res = diff
@@ -130,7 +123,6 @@ pub(crate) fn get_commit_diff<'a>(
 	id: CommitId,
 	pathspec: Option<String>,
 	options: Option<DiffOptions>,
-	stashes: Option<&HashSet<CommitId>>,
 ) -> Result<Diff<'a>> {
 	// scope_time!("get_commit_diff");
 
@@ -156,25 +148,11 @@ pub(crate) fn get_commit_diff<'a>(
 	}
 	opts.show_binary(true);
 
-	let mut diff = repo.diff_tree_to_tree(
+	let diff = repo.diff_tree_to_tree(
 		parent.as_ref(),
 		Some(&commit_tree),
 		Some(&mut opts),
 	)?;
-
-	if stashes.is_some_and(|stashes| stashes.contains(&id)) {
-		if let Ok(untracked_commit) = commit.parent_id(2) {
-			let untracked_diff = get_commit_diff(
-				repo,
-				CommitId::new(untracked_commit),
-				pathspec,
-				options,
-				stashes,
-			)?;
-
-			diff.merge(&untracked_diff)?;
-		}
-	}
 
 	Ok(diff)
 }
@@ -184,11 +162,7 @@ mod tests {
 	use super::get_commit_files;
 	use crate::{
 		error::Result,
-		sync::{
-			commit, stage_add_file, stash_save,
-			tests::{get_statuses, repo_init},
-			RepoPath,
-		},
+		sync::{commit, stage_add_file, tests::repo_init, RepoPath},
 		StatusItemType,
 	};
 	use std::{fs::File, io::Write, path::Path};
@@ -212,57 +186,6 @@ mod tests {
 
 		assert_eq!(diff.len(), 1);
 		assert_eq!(diff[0].status, StatusItemType::New);
-
-		Ok(())
-	}
-
-	#[test]
-	fn test_stashed_untracked() -> Result<()> {
-		let file_path = Path::new("file1.txt");
-		let (_td, repo) = repo_init()?;
-		let root = repo.path().parent().unwrap();
-		let repo_path: &RepoPath =
-			&root.as_os_str().to_str().unwrap().into();
-
-		File::create(root.join(file_path))?
-			.write_all(b"test file1 content")?;
-
-		let id = stash_save(repo_path, None, true, false)?;
-
-		let diff = get_commit_files(repo_path, id, None)?;
-
-		assert_eq!(diff.len(), 1);
-		assert_eq!(diff[0].status, StatusItemType::New);
-
-		Ok(())
-	}
-
-	#[test]
-	fn test_stashed_untracked_and_modified() -> Result<()> {
-		let file_path1 = Path::new("file1.txt");
-		let file_path2 = Path::new("file2.txt");
-		let (_td, repo) = repo_init()?;
-		let root = repo.path().parent().unwrap();
-		let repo_path: &RepoPath =
-			&root.as_os_str().to_str().unwrap().into();
-
-		File::create(root.join(file_path1))?.write_all(b"test")?;
-		stage_add_file(repo_path, file_path1)?;
-		commit(repo_path, "c1")?;
-
-		File::create(root.join(file_path1))?
-			.write_all(b"modified")?;
-		File::create(root.join(file_path2))?.write_all(b"new")?;
-
-		assert_eq!(get_statuses(repo_path), (2, 0));
-
-		let id = stash_save(repo_path, None, true, false)?;
-
-		let diff = get_commit_files(repo_path, id, None)?;
-
-		assert_eq!(diff.len(), 2);
-		assert_eq!(diff[0].status, StatusItemType::Modified);
-		assert_eq!(diff[1].status, StatusItemType::New);
 
 		Ok(())
 	}

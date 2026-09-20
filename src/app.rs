@@ -19,7 +19,7 @@ use crate::{
 		LogSearchPopupPopup, MsgPopup, OptionsPopup, PullPopup,
 		PushPopup, PushTagsPopup, RemoteListPopup, RenameBranchPopup,
 		RenameRemotePopup, ResetPopup, RevisionFilesPopup,
-		StashMsgPopup, SubmodulesListPopup, TagCommitPopup,
+		SubmodulesListPopup, TagCommitPopup,
 		TagListPopup, UpdateRemoteUrlPopup,
 	},
 	queue::{
@@ -28,7 +28,7 @@ use crate::{
 	},
 	setup_popups,
 	strings::{self, ellipsis_trim_start, order},
-	tabs::{FilesTab, Revlog, StashList, Stashing, Status},
+	tabs::{FilesTab, Revlog, Status},
 	try_or_popup,
 	ui::style::{SharedTheme, Theme},
 	AsyncAppNotification, AsyncNotification,
@@ -76,7 +76,6 @@ pub struct App {
 	commit_popup: CommitPopup,
 	blame_file_popup: BlameFilePopup,
 	file_revlog_popup: FileRevlogPopup,
-	stashmsg_popup: StashMsgPopup,
 	inspect_commit_popup: InspectCommitPopup,
 	compare_commits_popup: CompareCommitsPopup,
 	external_editor_popup: ExternalEditorPopup,
@@ -104,8 +103,6 @@ pub struct App {
 	tab: usize,
 	revlog: Revlog,
 	status_tab: Status,
-	stashing_tab: Stashing,
-	stashlist_tab: StashList,
 	files_tab: FilesTab,
 	queue: Queue,
 	theme: SharedTheme,
@@ -201,7 +198,6 @@ impl App {
 			),
 			file_revlog_popup: FileRevlogPopup::new(&env),
 			revision_files_popup: RevisionFilesPopup::new(&env),
-			stashmsg_popup: StashMsgPopup::new(&env),
 			inspect_commit_popup: InspectCommitPopup::new(&env),
 			compare_commits_popup: CompareCommitsPopup::new(&env),
 			external_editor_popup: ExternalEditorPopup::new(&env),
@@ -232,8 +228,6 @@ impl App {
 			msg_popup: MsgPopup::new(&env),
 			revlog: Revlog::new(&env),
 			status_tab: Status::new(&env),
-			stashing_tab: Stashing::new(&env),
-			stashlist_tab: StashList::new(&env),
 			files_tab: FilesTab::new(&env, select_file),
 			checkout_option_popup: CheckoutOptionPopup::new(&env),
 			goto_line_popup: GotoLinePopup::new(&env),
@@ -291,8 +285,6 @@ impl App {
 				0 => self.status_tab.draw(f, chunks_main[1])?,
 				1 => self.revlog.draw(f, chunks_main[1])?,
 				2 => self.files_tab.draw(f, chunks_main[1])?,
-				3 => self.stashing_tab.draw(f, chunks_main[1])?,
-				4 => self.stashlist_tab.draw(f, chunks_main[1])?,
 				_ => bail!("unknown tab"),
 			}
 		}
@@ -339,12 +331,6 @@ impl App {
 				) || key_match(
 					k,
 					self.key_config.keys.tab_files,
-				) || key_match(
-					k,
-					self.key_config.keys.tab_stashing,
-				) || key_match(
-					k,
-					self.key_config.keys.tab_stashes,
 				) {
 					self.switch_tab(k)?;
 					NeedsUpdate::COMMANDS
@@ -407,8 +393,6 @@ impl App {
 		self.status_tab.update()?;
 		self.revlog.update()?;
 		self.files_tab.update()?;
-		self.stashing_tab.update()?;
-		self.stashlist_tab.update()?;
 		self.reset_popup.update()?;
 
 		self.update_commands();
@@ -425,7 +409,6 @@ impl App {
 
 		if let AsyncNotification::Git(ev) = ev {
 			self.status_tab.update_git(ev)?;
-			self.stashing_tab.update_git(ev)?;
 			self.revlog.update_git(ev)?;
 			self.file_revlog_popup.update_git(ev)?;
 			self.inspect_commit_popup.update_git(ev)?;
@@ -464,7 +447,6 @@ impl App {
 	pub fn any_work_pending(&self) -> bool {
 		self.status_tab.anything_pending()
 			|| self.revlog.any_work_pending()
-			|| self.stashing_tab.anything_pending()
 			|| self.files_tab.anything_pending()
 			|| self.blame_file_popup.any_work_pending()
 			|| self.file_revlog_popup.any_work_pending()
@@ -503,7 +485,6 @@ impl App {
 			goto_line_popup,
 			blame_file_popup,
 			file_revlog_popup,
-			stashmsg_popup,
 			inspect_commit_popup,
 			compare_commits_popup,
 			external_editor_popup,
@@ -528,9 +509,7 @@ impl App {
 			help_popup,
 			revlog,
 			status_tab,
-			files_tab,
-			stashing_tab,
-			stashlist_tab
+			files_tab
 		]
 	);
 
@@ -538,7 +517,6 @@ impl App {
 		self,
 		[
 			commit_popup,
-			stashmsg_popup,
 			help_popup,
 			inspect_commit_popup,
 			compare_commits_popup,
@@ -599,8 +577,6 @@ impl App {
 			&mut self.status_tab,
 			&mut self.revlog,
 			&mut self.files_tab,
-			&mut self.stashing_tab,
-			&mut self.stashlist_tab,
 		]
 	}
 
@@ -622,10 +598,6 @@ impl App {
 			self.switch_to_tab(&AppTabs::Log)?;
 		} else if key_match(k, self.key_config.keys.tab_files) {
 			self.switch_to_tab(&AppTabs::Files)?;
-		} else if key_match(k, self.key_config.keys.tab_stashing) {
-			self.switch_to_tab(&AppTabs::Stashing)?;
-		} else if key_match(k, self.key_config.keys.tab_stashes) {
-			self.switch_to_tab(&AppTabs::Stashlist)?;
 		}
 
 		Ok(())
@@ -652,8 +624,6 @@ impl App {
 			AppTabs::Status => self.set_tab(0)?,
 			AppTabs::Log => self.set_tab(1)?,
 			AppTabs::Files => self.set_tab(2)?,
-			AppTabs::Stashing => self.set_tab(3)?,
-			AppTabs::Stashlist => self.set_tab(4)?,
 		}
 		Ok(())
 	}
@@ -764,10 +734,6 @@ impl App {
 			InternalEvent::RewordCommit(id) => {
 				self.commit_popup.open(Some(id))?;
 			}
-			InternalEvent::PopupStashing(opts) => {
-				self.stashmsg_popup.options(opts);
-				self.stashmsg_popup.show()?;
-			}
 			InternalEvent::TagCommit(id) => {
 				self.tag_commit_popup.open(id)?;
 			}
@@ -801,10 +767,6 @@ impl App {
 				self.tags_popup.open()?;
 			}
 			InternalEvent::TabSwitchStatus => self.set_tab(0)?,
-			InternalEvent::TabSwitch(tab) => {
-				self.switch_to_tab(&tab)?;
-				flags.insert(NeedsUpdate::ALL);
-			}
 			InternalEvent::SelectCommitInRevlog(id) => {
 				if let Err(error) = self.revlog.select_commit(id) {
 					self.queue.push(InternalEvent::ShowErrorMsg(
@@ -952,16 +914,6 @@ impl App {
 		match action {
 			Action::Reset(r) => {
 				self.status_tab.reset(&r);
-			}
-			Action::StashDrop(_) | Action::StashPop(_) => {
-				if let Err(e) = self
-					.stashlist_tab
-					.action_confirmed(&self.repo.borrow(), &action)
-				{
-					self.queue.push(InternalEvent::ShowErrorMsg(
-						e.to_string(),
-					));
-				}
 			}
 			Action::ResetHunk(path, hash) => {
 				sync::reset_hunk(
@@ -1171,8 +1123,6 @@ impl App {
 			Span::raw(strings::tab_status(&self.key_config)),
 			Span::raw(strings::tab_log(&self.key_config)),
 			Span::raw(strings::tab_files(&self.key_config)),
-			Span::raw(strings::tab_stashing(&self.key_config)),
-			Span::raw(strings::tab_stashes(&self.key_config)),
 		];
 		let divider = strings::tab_divider(&self.key_config);
 

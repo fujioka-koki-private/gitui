@@ -47,7 +47,6 @@
 - Context based help (**no need to memorize** tons of hot-keys)
 - Inspect, commit, and amend changes (incl. hooks: *pre-commit*,*commit-msg*,*post-commit*,*prepare-commit-msg*)
 - Stage, unstage, revert and reset files, hunks and lines
-- Stashing (save, pop, apply, drop, and inspect)
 - Push / Fetch to / from remote
 - Branch List (create, rename, delete, checkout, remotes)
 - Browse / **Search** commit log, diff committed changes
@@ -89,7 +88,7 @@ These are the high level goals before calling out `1.0`:
 
 Currently, this tool does not fully substitute the _git shell_, however both tools work well in tandem.
 
-The priorities for `gitui` are on features that are making me mad when done on the _git shell_, like stashing, staging lines or hunks. Eventually, I will be able to work on making `gitui` a one stop solution - but for that I need help - this is just a spare time project for now.
+The priorities for `gitui` are on features that are making me mad when done on the _git shell_, like staging lines or hunks. Eventually, I will be able to work on making `gitui` a one stop solution - but for that I need help - this is just a spare time project for now.
 
 All support is welcomed! Sponsors as well! ❤️
 

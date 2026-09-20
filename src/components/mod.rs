@@ -9,7 +9,7 @@ They have a state, handle events, and render to the terminal:
 * Some are decorations, eg [`HorizontalScroll`](utils::scroll_horizontal::HorizontalScroll).
 
 Components can be reused.
-For example, [`CommitList`] is used in both tab "revlog" and tab "stashlist".
+For example, [`CommitList`] is used in tab "revlog".
 
 
 ## Composition
